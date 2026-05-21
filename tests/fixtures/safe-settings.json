@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "command": "python scripts/format_changed.py"
+      }
+    ]
+  }
+}
