@@ -21,10 +21,68 @@ def render_text(findings: list[Finding]) -> str:
     return "\n".join(lines).rstrip()
 
 
+def render_sarif(findings: list[Finding]) -> dict[str, object]:
+    """Return a minimal SARIF 2.1.0 report for GitHub code scanning."""
+    rules: dict[str, dict[str, object]] = {}
+    results: list[dict[str, object]] = []
+    level_by_severity = {
+        "critical": "error",
+        "high": "error",
+        "medium": "warning",
+        "low": "note",
+        "info": "note",
+    }
+
+    for finding in findings:
+        rules.setdefault(
+            finding.code,
+            {
+                "id": finding.code,
+                "name": finding.message,
+                "shortDescription": {"text": finding.message},
+                "properties": {"security-severity": str(SEVERITY_RANK[finding.severity])},
+            },
+        )
+        results.append(
+            {
+                "ruleId": finding.code,
+                "level": level_by_severity.get(finding.severity, "warning"),
+                "message": {"text": f"{finding.message}: {finding.evidence}"},
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": finding.file},
+                            "region": {"startLine": 1},
+                        },
+                        "logicalLocations": [{"fullyQualifiedName": finding.path}],
+                    }
+                ],
+                "properties": {"severity": finding.severity, "jsonPath": finding.path},
+            }
+        )
+
+    return {
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "agent-hook-lens",
+                        "informationUri": "https://github.com/thecatnamedkuro/agent-hook-lens",
+                        "rules": list(rules.values()),
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Scan AI coding-agent hook JSON settings for risky commands.")
     parser.add_argument("paths", nargs="+", help="JSON settings files to scan")
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format")
+    parser.add_argument("--format", choices=["text", "json", "sarif"], default="text", help="output format")
     parser.add_argument("--fail-on", choices=["low", "medium", "high", "critical"], default=None, help="exit non-zero when max severity is at least this level")
     args = parser.parse_args(argv)
 
@@ -39,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         payload = {"finding_count": len(findings), "max_severity": max_severity(findings), "findings": [f.as_dict() for f in findings]}
         print(json.dumps(payload, indent=2, sort_keys=True))
+    elif args.format == "sarif":
+        print(json.dumps(render_sarif(findings), indent=2, sort_keys=True))
     else:
         print(render_text(findings))
 

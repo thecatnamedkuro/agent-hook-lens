@@ -35,6 +35,12 @@ Emit JSON for CI or dashboards:
 agent-hook-lens --format json path/to/settings.json
 ```
 
+Emit SARIF 2.1.0 for GitHub code scanning or PR annotations:
+
+```bash
+agent-hook-lens --format sarif .claude/settings.json > agent-hook-lens.sarif
+```
+
 Set a CI failure threshold (`low`, `medium`, `high`, or `critical`):
 
 ```bash
@@ -69,7 +75,7 @@ The scanner is intentionally heuristic: it is a fast review aid, not a sandbox.
 
 ## Commercial angle
 
-The free CLI can grow into hosted hook-policy checks for teams: central policy packs, GitHub PR annotations, fleet-wide hook inventory, and exception workflows for agent-heavy engineering orgs.
+The free CLI can grow into hosted hook-policy checks for teams: central policy packs, GitHub PR/SARIF annotations, fleet-wide hook inventory, and exception workflows for agent-heavy engineering orgs.
 
 ## Privacy and safety
 
